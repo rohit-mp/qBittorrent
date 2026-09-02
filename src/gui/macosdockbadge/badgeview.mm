@@ -31,6 +31,7 @@
 
 #include <QString>
 
+#include "base/preferences.h"
 #include "base/utils/misc.h"
 
 static const CGFloat kBetweenPadding = 2.0;
@@ -48,6 +49,8 @@ static CGSize kArrowSize;
 
 @property(nonatomic) int64_t fDownloadRate;
 @property(nonatomic) int64_t fUploadRate;
+@property(nonatomic) BOOL fSpeedInBits;
+@property(nonatomic) BOOL fSpeedUseDecimalPrefixes;
 
 @end
 
@@ -59,6 +62,9 @@ static CGSize kArrowSize;
     {
         _fDownloadRate = 0.0;
         _fUploadRate = 0.0;
+        const auto *pref = Preferences::instance();
+        _fSpeedInBits = (pref->speedUnitType() == Utils::Misc::UnitType::Bit);
+        _fSpeedUseDecimalPrefixes = pref->speedUseDecimalPrefixes();
 
         NSShadow *stringShadow = [[NSShadow alloc] init];
         stringShadow.shadowOffset = NSMakeSize(2.0, -2.0);
@@ -79,14 +85,22 @@ static CGSize kArrowSize;
 
 - (BOOL)setRatesWithDownload:(int64_t)downloadRate upload:(int64_t)uploadRate
 {
+    const auto *pref = Preferences::instance();
+    const BOOL speedInBits = (pref->speedUnitType() == Utils::Misc::UnitType::Bit);
+    const BOOL speedUseDecimalPrefixes = pref->speedUseDecimalPrefixes();
+
     // only needs update if the badges were displayed or are displayed now
-    if ((self.fDownloadRate == downloadRate) && (self.fUploadRate == uploadRate))
+    if ((self.fDownloadRate == downloadRate) && (self.fUploadRate == uploadRate)
+        && (self.fSpeedInBits == speedInBits)
+        && (self.fSpeedUseDecimalPrefixes == speedUseDecimalPrefixes))
     {
         return NO;
     }
 
     self.fDownloadRate = downloadRate;
     self.fUploadRate = uploadRate;
+    self.fSpeedInBits = speedInBits;
+    self.fSpeedUseDecimalPrefixes = speedUseDecimalPrefixes;
 
     return YES;
 }
@@ -98,10 +112,14 @@ static CGSize kArrowSize;
     const BOOL upload = self.fUploadRate >= 0.1;
     const BOOL download = self.fDownloadRate >= 0.1;
     CGFloat bottom = 0.0;
+    const auto unitType = self.fSpeedInBits
+            ? Utils::Misc::UnitType::Bit
+            : Utils::Misc::UnitType::Byte;
     if (download)
     {
         [self badge:kDownloadBadgeColor arrow:kDownloadArrow
-            string:Utils::Misc::friendlyUnitCompact(self.fDownloadRate).toNSString()
+            string:Utils::Misc::friendlySpeedUnitCompact(
+                    self.fDownloadRate, unitType, self.fSpeedUseDecimalPrefixes).toNSString()
             atHeight:bottom];
 
         if (upload)
@@ -112,7 +130,8 @@ static CGSize kArrowSize;
     if (upload)
     {
         [self badge:kUploadBadgeColor arrow:kUploadArrow
-            string:Utils::Misc::friendlyUnitCompact(self.fUploadRate).toNSString()
+            string:Utils::Misc::friendlySpeedUnitCompact(
+                    self.fUploadRate, unitType, self.fSpeedUseDecimalPrefixes).toNSString()
             atHeight:bottom];
     }
 }

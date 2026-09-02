@@ -312,7 +312,8 @@ The piece hash will be checked when it is requested for the first time by a peer
                                 </td>
                                 <td class="fullWidth">
                                     <input type="hidden" id="dlLimitHidden" name="dlLimit">
-                                    <input type="text" id="dlLimitText" placeholder="QBT_TR(KiB/s)QBT_TR[CONTEXT=AddNewTorrentDialog]">
+                                    <input type="text" id="dlLimitText" aria-describedby="dlLimitUnit">
+                                    <span id="dlLimitUnit">QBT_TR(KiB/s)QBT_TR[CONTEXT=AddNewTorrentDialog]</span>
                                 </td>
                             </tr>
                             <tr>
@@ -321,7 +322,8 @@ The piece hash will be checked when it is requested for the first time by a peer
                                 </td>
                                 <td class="fullWidth">
                                     <input type="hidden" id="upLimitHidden" name="upLimit">
-                                    <input type="text" id="upLimitText" placeholder="QBT_TR(KiB/s)QBT_TR[CONTEXT=AddNewTorrentDialog]">
+                                    <input type="text" id="upLimitText" aria-describedby="upLimitUnit">
+                                    <span id="upLimitUnit">QBT_TR(KiB/s)QBT_TR[CONTEXT=AddNewTorrentDialog]</span>
                                 </td>
                             </tr>
                         </tbody>

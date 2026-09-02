@@ -261,20 +261,26 @@ QString TransferListModel::displayValue(const BitTorrent::Torrent *torrent, cons
             : tr("N/A");
     };
 
-    const auto unitString = [hideValues](const qint64 value, const bool isSpeedUnit = false) -> QString
+    const auto unitString = [this, hideValues](const qint64 value, const bool isSpeedUnit = false) -> QString
     {
-        return (hideValues && (value == 0))
-                ? QString {} : Utils::Misc::friendlyUnit(value, isSpeedUnit);
+        if (hideValues && (value == 0))
+            return {};
+
+        if (isSpeedUnit)
+            return Utils::Misc::friendlySpeedUnit(value, m_speedUnitType, m_speedUseDecimalPrefixes);
+
+        return Utils::Misc::friendlyUnit(value);
     };
 
-    const auto limitString = [hideValues](const qint64 value) -> QString
+    const auto limitString = [this, hideValues](const qint64 value) -> QString
     {
         if (hideValues && (value <= 0))
             return {};
 
-        return (value > 0)
-                ? Utils::Misc::friendlyUnit(value, true)
-                : C_INFINITY;
+        if (value > 0)
+            return Utils::Misc::friendlySpeedUnit(value, m_speedUnitType, m_speedUseDecimalPrefixes);
+
+        return C_INFINITY;
     };
 
     const auto amountString = [hideValues](const qint64 value, const qint64 total) -> QString
@@ -745,6 +751,18 @@ void TransferListModel::configure()
     if (const bool useTorrentStatesColors = pref->useTorrentStatesColors(); m_useTorrentStatesColors != useTorrentStatesColors)
     {
         m_useTorrentStatesColors = useTorrentStatesColors;
+        isDataChanged = true;
+    }
+
+    if (const Utils::Misc::UnitType speedUnitType = pref->speedUnitType(); m_speedUnitType != speedUnitType)
+    {
+        m_speedUnitType = speedUnitType;
+        isDataChanged = true;
+    }
+
+    if (const bool speedUseDecimalPrefixes = pref->speedUseDecimalPrefixes(); m_speedUseDecimalPrefixes != speedUseDecimalPrefixes)
+    {
+        m_speedUseDecimalPrefixes = speedUseDecimalPrefixes;
         isDataChanged = true;
     }
 

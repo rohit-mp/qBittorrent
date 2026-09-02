@@ -41,6 +41,7 @@
 #include <QList>
 
 #include "base/bittorrent/torrent.h"
+#include "base/utils/misc.h"
 
 namespace BitTorrent
 {
@@ -148,6 +149,8 @@ private:
 
     HideZeroValuesMode m_hideZeroValuesMode = HideZeroValuesMode::Never;
     bool m_useTorrentStatesColors = false;
+    Utils::Misc::UnitType m_speedUnitType = Utils::Misc::UnitType::Byte;
+    bool m_speedUseDecimalPrefixes = false;
 
     // cached icons
     QIcon m_checkingIcon;
