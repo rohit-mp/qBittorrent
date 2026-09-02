@@ -47,6 +47,7 @@ window.qBittorrent.AddTorrent ??= (() => {
     let source = "";
     let downloader = "";
     let sharedMode = false;
+    let speedSettings = null;
     let urlEntries = [];
 
     const clientData = window.parent.qBittorrent.ClientData;
@@ -88,12 +89,16 @@ window.qBittorrent.AddTorrent ??= (() => {
 
     const getPreferences = () => {
         const pref = window.parent.qBittorrent.Cache.preferences.get();
+        speedSettings = window.qBittorrent.Misc.getSpeedSettings(pref);
 
         defaultSavePath = pref.save_path;
         defaultTempPath = pref.temp_path;
         defaultTempPathEnabled = pref.temp_path_enabled;
         document.getElementById("startTorrent").checked = !pref.add_stopped_enabled;
         document.getElementById("addToTopOfQueue").checked = pref.add_to_top_of_queue;
+        const speedUnit = window.qBittorrent.Misc.getSpeedInputUnit(speedSettings);
+        document.getElementById("dlLimitUnit").textContent = speedUnit;
+        document.getElementById("upLimitUnit").textContent = speedUnit;
 
         const autoTMM = document.getElementById("autoTMM");
         if (pref.auto_tmm_enabled) {
@@ -355,8 +360,9 @@ window.qBittorrent.AddTorrent ??= (() => {
     const submitForm = () => {
         document.getElementById("startTorrentHidden").value = document.getElementById("startTorrent").checked ? "false" : "true";
 
-        document.getElementById("dlLimitHidden").value = Number(document.getElementById("dlLimitText").value) * 1024;
-        document.getElementById("upLimitHidden").value = Number(document.getElementById("upLimitText").value) * 1024;
+        speedSettings ??= window.qBittorrent.Misc.getSpeedSettings(window.parent.qBittorrent.Cache.preferences.get());
+        document.getElementById("dlLimitHidden").value = window.qBittorrent.Misc.inputValueToSpeed(document.getElementById("dlLimitText").value, speedSettings) || 0;
+        document.getElementById("upLimitHidden").value = window.qBittorrent.Misc.inputValueToSpeed(document.getElementById("upLimitText").value, speedSettings) || 0;
 
         if (table !== null) {
             document.getElementById("filePriorities").value = table.getFileTreeArray()

@@ -146,12 +146,16 @@ namespace LuaFunctions
 
     QString friendlySpeedUnit1(const qint64 bytes)
     {
-        return Utils::Misc::friendlyUnit(bytes, true, -1);
+        const auto *pref = Preferences::instance();
+        return Utils::Misc::friendlySpeedUnit(
+                bytes, pref->speedUnitType(), pref->speedUseDecimalPrefixes());
     }
 
     QString friendlySpeedUnit2(const qint64 bytes, const int precision)
     {
-        return Utils::Misc::friendlyUnit(bytes, true, precision);
+        const auto *pref = Preferences::instance();
+        return Utils::Misc::friendlySpeedUnit(
+                bytes, pref->speedUnitType(), pref->speedUseDecimalPrefixes(), precision);
     }
 
     QString friendlyDuration(const qint64 seconds)

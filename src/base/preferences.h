@@ -35,6 +35,7 @@
 
 #include "base/net/smtpencryptiontype.h"
 #include "base/pathfwd.h"
+#include "base/utils/misc.h"
 #include "base/utils/net.h"
 
 class QDateTime;
@@ -436,6 +437,11 @@ public:
     void setSpeedWidgetPeriod(int period);
     bool getSpeedWidgetGraphEnable(int id) const;
     void setSpeedWidgetGraphEnable(int id, bool enable);
+
+    Utils::Misc::UnitType speedUnitType() const;
+    void setSpeedUnitType(Utils::Misc::UnitType type);
+    bool speedUseDecimalPrefixes() const;
+    void setSpeedUseDecimalPrefixes(bool useDecimalPrefixes);
 
     // AddNewTorrentDialog
     bool isAddNewTorrentDialogEnabled() const;

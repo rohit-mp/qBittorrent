@@ -29,6 +29,8 @@
 #import "itemview.h"
 
 #include <QString>
+
+#include "base/preferences.h"
 #include "base/utils/misc.h"
 
 namespace
@@ -41,6 +43,8 @@ namespace
 
 @property(nonatomic) int64_t fDownloadRate;
 @property(nonatomic) int64_t fUploadRate;
+@property(nonatomic) BOOL fSpeedInBits;
+@property(nonatomic) BOOL fSpeedUseDecimalPrefixes;
 
 @property(strong) NSStatusItem *statusItem;
 
@@ -55,6 +59,9 @@ namespace
     if ((self = [super init])){
         self.fDownloadRate = 0.0;
         self.fUploadRate = 0.0;
+        const auto *pref = Preferences::instance();
+        self.fSpeedInBits = (pref->speedUnitType() == Utils::Misc::UnitType::Bit);
+        self.fSpeedUseDecimalPrefixes = pref->speedUseDecimalPrefixes();
 
         NSImage *icon = [NSImage imageNamed:@"qbittorrent_mac"];
         [icon setSize:NSMakeSize(16, 16)];
@@ -68,8 +75,10 @@ namespace
 
         self.statusMenu = [[NSMenu alloc] init];
 
-        const QString uploadString = Utils::Misc::friendlyUnit(self.fUploadRate, true);
-        const QString downloadString = Utils::Misc::friendlyUnit(self.fDownloadRate, true);
+        const QString uploadString = Utils::Misc::friendlySpeedUnit(
+                self.fUploadRate, pref->speedUnitType(), pref->speedUseDecimalPrefixes());
+        const QString downloadString = Utils::Misc::friendlySpeedUnit(
+                self.fDownloadRate, pref->speedUnitType(), pref->speedUseDecimalPrefixes());
 
         NSString *uploadNSString = uploadString.toNSString();
         NSString *downloadNSString = downloadString.toNSString();
@@ -89,14 +98,23 @@ namespace
 
 - (BOOL)setRatesWithDownload:(int64_t)downloadRate upload:(int64_t)uploadRate
 {
-    if ((downloadRate == self.fDownloadRate) && (uploadRate == self.fUploadRate))
+    const auto *pref = Preferences::instance();
+    const BOOL speedInBits = (pref->speedUnitType() == Utils::Misc::UnitType::Bit);
+    const BOOL speedUseDecimalPrefixes = pref->speedUseDecimalPrefixes();
+    if ((downloadRate == self.fDownloadRate) && (uploadRate == self.fUploadRate)
+        && (speedInBits == self.fSpeedInBits)
+        && (speedUseDecimalPrefixes == self.fSpeedUseDecimalPrefixes))
         return NO;
 
     self.fDownloadRate = downloadRate;
     self.fUploadRate = uploadRate;
+    self.fSpeedInBits = speedInBits;
+    self.fSpeedUseDecimalPrefixes = speedUseDecimalPrefixes;
 
-    const QString uploadString = Utils::Misc::friendlyUnit(self.fUploadRate, true);
-    const QString downloadString = Utils::Misc::friendlyUnit(self.fDownloadRate, true);
+    const QString uploadString = Utils::Misc::friendlySpeedUnit(
+            self.fUploadRate, pref->speedUnitType(), pref->speedUseDecimalPrefixes());
+    const QString downloadString = Utils::Misc::friendlySpeedUnit(
+            self.fDownloadRate, pref->speedUnitType(), pref->speedUseDecimalPrefixes());
 
     NSString *uploadNSString = uploadString.toNSString();
     NSString *downloadNSString = downloadString.toNSString();

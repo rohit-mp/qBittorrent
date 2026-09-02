@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/style.css?v=${CACHEID}" type="text/css">
     <script defer src="scripts/localpreferences.js?v=${CACHEID}"></script>
     <script defer src="scripts/color-scheme.js?v=${CACHEID}"></script>
+    <script defer src="scripts/misc.js?locale=${LANG}&v=${CACHEID}"></script>
     <script>
         "use strict";
 
@@ -38,31 +39,46 @@
 
             const limitUpdateValue = document.getElementById("limitUpdateValue");
             const limitUnit = document.getElementById("limitUnit");
+            const speedSettings = window.qBittorrent.Misc.getSpeedSettings(window.parent.qBittorrent.Cache.preferences.get());
+            limitUnit.textContent = window.qBittorrent.Misc.getSpeedInputUnit(speedSettings);
+            let limitValue = 0;
+            let limitValueDirty = false;
 
             const setLimitUpdateValue = (value) => {
+                limitValue = value;
+                limitValueDirty = false;
                 if (value === 0) {
                     limitUpdateValue.value = "∞";
                     limitUnit.style.visibility = "hidden";
                 }
                 else {
-                    limitUpdateValue.value = value;
+                    limitUpdateValue.value = window.qBittorrent.Misc.speedToInputValue(value, speedSettings);
                     limitUnit.style.visibility = "visible";
                 }
             };
 
             const setupSlider = (limit, maximum) => {
                 const input = document.getElementById("limitSliderInput");
-                input.max = maximum;
-                input.value = limit;
+                const fallbackMaximum = (1000 * 1024);
+                input.max = window.qBittorrent.Misc.speedToInputValue(
+                    Math.max(limit, (maximum > 0) ? maximum : fallbackMaximum), speedSettings);
+                input.value = window.qBittorrent.Misc.speedToInputValue(limit, speedSettings);
                 input.addEventListener("input", (event) => {
-                    setLimitUpdateValue(Number(event.target.value));
+                    setLimitUpdateValue(window.qBittorrent.Misc.inputValueToSpeed(event.target.value, speedSettings));
                 });
                 // Set default value
                 setLimitUpdateValue(limit);
             };
 
+            limitUpdateValue.addEventListener("input", () => {
+                limitValueDirty = true;
+            });
+
             applyButton.addEventListener("click", (event) => {
-                const limit = Number(limitUpdateValue.value) * 1024;
+                const limit = limitValueDirty
+                    ? (window.qBittorrent.Misc.inputValueToSpeed(limitUpdateValue.value, speedSettings) || 0)
+                    : limitValue;
+                setLimitUpdateValue(limit);
 
                 fetch(`api/v2/torrents/${setLimitMethod}`, {
                         method: "POST",
@@ -94,7 +110,7 @@
 
                     const data = await response.text();
 
-                    const globalLimit = Math.max((Number(data) / 1024), 0);
+                    const globalLimit = Math.max(Number(data), 0);
 
                     // Get torrents download limit
                     // And create slider
@@ -112,9 +128,9 @@
 
                             const firstLimit = Math.max(data[hashes[0]], 0);
                             const isAllFirstLimit = Object.values(data).every(value => value === firstLimit);
-                            const limit = isAllFirstLimit ? Math.round(firstLimit / 1024) : 0;
+                            const limit = isAllFirstLimit ? firstLimit : 0;
 
-                            setupSlider(limit, ((globalLimit > 0) ? globalLimit : 1000));
+                            setupSlider(limit, globalLimit);
                         });
                 });
 
@@ -131,7 +147,7 @@
                 <input type="text" id="limitUpdateValue" size="6" placeholder="∞" style="text-align: center;">
                 <span id="limitUnit">QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
             </div>
-            <input type="range" id="limitSliderInput" min="0" value="0" style="width: 100%;" aria-label="QBT_TR(Speed limit)QBT_TR[CONTEXT=SpeedLimit]">
+            <input type="range" id="limitSliderInput" min="0" value="0" step="any" style="width: 100%;" aria-label="QBT_TR(Speed limit)QBT_TR[CONTEXT=SpeedLimit]">
         </div>
         <input type="button" id="applyButton" value="QBT_TR(Apply)QBT_TR[CONTEXT=HttpServer]">
     </div>

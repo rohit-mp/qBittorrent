@@ -38,6 +38,7 @@
 #include "base/bittorrent/sharelimits.h"
 #include "base/path.h"
 #include "base/settingvalue.h"
+#include "base/utils/misc.h"
 
 class QAbstractButton;
 
@@ -82,6 +83,11 @@ private:
     QString m_currentCategoriesString;
     bool m_allSameCategory = true;
     QAbstractButton *m_previousRadio = nullptr;
+    Utils::Misc::Unit m_speedUnit {Utils::Misc::UnitType::Byte, Utils::Misc::UnitPrefix::Kibi};
+    std::optional<qint64> m_uploadSpeedLimit;
+    std::optional<qint64> m_downloadSpeedLimit;
+    bool m_uploadSpeedLimitChanged = false;
+    bool m_downloadSpeedLimitChanged = false;
     struct
     {
         Path savePath;
@@ -92,8 +98,6 @@ private:
         std::optional<int> inactiveSeedingTime;
         std::optional<BitTorrent::ShareLimitsMode> shareLimitsMode;
         std::optional<BitTorrent::ShareLimitAction> shareLimitAction;
-        int upSpeedLimit;
-        int downSpeedLimit;
         Qt::CheckState autoTMM;
         Qt::CheckState useDownloadPath;
         Qt::CheckState disableDHT;

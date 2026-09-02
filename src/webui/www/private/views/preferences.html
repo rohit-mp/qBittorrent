@@ -686,6 +686,32 @@ QBT_TR((best choice if supported))QBT_TR[CONTEXT=OptionsDialog] QBT_TR(Default p
 
 <div id="SpeedTab" class="PrefTab invisible">
     <fieldset class="settings">
+        <legend>QBT_TR(Speed Units)QBT_TR[CONTEXT=OptionsDialog]</legend>
+        <table>
+            <tbody>
+                <tr>
+                    <td><label for="speedUnitTypeSelect">QBT_TR(Unit:)QBT_TR[CONTEXT=OptionsDialog]</label></td>
+                    <td>
+                        <select id="speedUnitTypeSelect">
+                            <option value="bytes">QBT_TR(Bytes per second)QBT_TR[CONTEXT=OptionsDialog]</option>
+                            <option value="bits">QBT_TR(Bits per second)QBT_TR[CONTEXT=OptionsDialog]</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="speedPrefixSelect">QBT_TR(Prefix:)QBT_TR[CONTEXT=OptionsDialog]</label></td>
+                    <td>
+                        <select id="speedPrefixSelect">
+                            <option value="binary">QBT_TR(Binary (powers of 1024))QBT_TR[CONTEXT=OptionsDialog]</option>
+                            <option value="decimal">QBT_TR(Decimal (powers of 1000))QBT_TR[CONTEXT=OptionsDialog]</option>
+                        </select>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </fieldset>
+
+    <fieldset class="settings">
         <legend>QBT_TR(Global Rate Limits)QBT_TR[CONTEXT=OptionsDialog]</legend>
         <table>
             <tbody>
@@ -694,11 +720,11 @@ QBT_TR((best choice if supported))QBT_TR[CONTEXT=OptionsDialog] QBT_TR(Default p
                         <img src="images/slow_off.svg" style="height: 2.5em;" alt="QBT_TR(Alternative speed limits)QBT_TR[CONTEXT=MainWindow]">
                     </td>
                     <td><label for="upLimitValue">QBT_TR(Upload:)QBT_TR[CONTEXT=OptionsDialog]</label></td>
-                    <td><input type="number" id="upLimitValue" style="width: 6em;" min="0">&nbsp;&nbsp;QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</td>
+                    <td><input type="number" id="upLimitValue" style="width: 6em;" min="0" step="0.001">&nbsp;&nbsp;<span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</span></td>
                 </tr>
                 <tr>
                     <td><label for="dlLimitValue">QBT_TR(Download:)QBT_TR[CONTEXT=OptionsDialog]</label></td>
-                    <td><input type="number" id="dlLimitValue" style="width: 6em;" min="0">&nbsp;&nbsp;QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</td>
+                    <td><input type="number" id="dlLimitValue" style="width: 6em;" min="0" step="0.001">&nbsp;&nbsp;<span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</span></td>
                 </tr>
             </tbody>
         </table>
@@ -714,11 +740,11 @@ QBT_TR((best choice if supported))QBT_TR[CONTEXT=OptionsDialog] QBT_TR(Default p
                         <img src="images/slow.svg" style="height: 2.5em;" alt="QBT_TR(Alternative speed limits)QBT_TR[CONTEXT=MainWindow]">
                     </td>
                     <td><label for="altUpLimitValue">QBT_TR(Upload:)QBT_TR[CONTEXT=OptionsDialog]</label></td>
-                    <td><input type="number" id="altUpLimitValue" style="width: 6em;" min="0">&nbsp;&nbsp;QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</td>
+                    <td><input type="number" id="altUpLimitValue" style="width: 6em;" min="0" step="0.001">&nbsp;&nbsp;<span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</span></td>
                 </tr>
                 <tr>
                     <td><label for="altDlLimitValue">QBT_TR(Download:)QBT_TR[CONTEXT=OptionsDialog]</label></td>
-                    <td><input type="number" id="altDlLimitValue" style="width: 6em;" min="0">&nbsp;&nbsp;QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</td>
+                    <td><input type="number" id="altDlLimitValue" style="width: 6em;" min="0" step="0.001">&nbsp;&nbsp;<span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</span></td>
                 </tr>
             </tbody>
         </table>
@@ -849,7 +875,7 @@ QBT_TR((best choice if supported))QBT_TR[CONTEXT=OptionsDialog] QBT_TR(Default p
                             <label for="dlRateThresholdValue">QBT_TR(Download rate threshold:)QBT_TR[CONTEXT=OptionsDialog]</label>
                         </td>
                         <td>
-                            <input type="text" id="dlRateThresholdValue" style="width: 6em;">&nbsp;&nbsp;QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]
+                            <input type="text" id="dlRateThresholdValue" style="width: 6em;">&nbsp;&nbsp;<span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</span>
                         </td>
                     </tr>
                     <tr>
@@ -857,7 +883,7 @@ QBT_TR((best choice if supported))QBT_TR[CONTEXT=OptionsDialog] QBT_TR(Default p
                             <label for="ulRateThresholdValue">QBT_TR(Upload rate threshold:)QBT_TR[CONTEXT=OptionsDialog]</label>
                         </td>
                         <td>
-                            <input type="text" id="ulRateThresholdValue" style="width: 6em;">&nbsp;&nbsp;QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]
+                            <input type="text" id="ulRateThresholdValue" style="width: 6em;">&nbsp;&nbsp;<span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=OptionsDialog]</span>
                         </td>
                     </tr>
                     <tr>
@@ -2220,6 +2246,83 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
         };
 
         // Speed tab
+        const speedInputIds = [
+            "upLimitValue",
+            "dlLimitValue",
+            "altUpLimitValue",
+            "altDlLimitValue",
+            "dlRateThresholdValue",
+            "ulRateThresholdValue"
+        ];
+        let currentSpeedSettings = window.qBittorrent.Misc.getSpeedSettings({});
+        const canonicalSpeedValues = new Map();
+        const dirtySpeedInputs = new Set();
+        const pendingSpeedSteps = new Set();
+        const steppedSpeedInputs = new Set();
+
+        const getSelectedSpeedSettings = () => {
+            return window.qBittorrent.Misc.getSpeedSettings({
+                speed_in_bits: (document.getElementById("speedUnitTypeSelect").value === "bits"),
+                speed_use_decimal_prefixes: (document.getElementById("speedPrefixSelect").value === "decimal")
+            });
+        };
+
+        const updateSpeedUnitLabels = () => {
+            const unit = window.qBittorrent.Misc.getSpeedInputUnit(currentSpeedSettings);
+            for (const label of document.querySelectorAll(".speedUnitLabel"))
+                label.textContent = unit;
+        };
+
+        const setSpeedInputValue = (id, value) => {
+            canonicalSpeedValues.set(id, value);
+            dirtySpeedInputs.delete(id);
+            steppedSpeedInputs.delete(id);
+            document.getElementById(id).value = window.qBittorrent.Misc.speedToInputValue(value, currentSpeedSettings);
+        };
+
+        const normalizeSpeedInput = (id) => {
+            const input = document.getElementById(id);
+            const isDirty = dirtySpeedInputs.has(id);
+            if (!isDirty)
+                return canonicalSpeedValues.get(id);
+
+            const value = window.qBittorrent.Misc.inputValueToSpeed(input.value, currentSpeedSettings);
+            const currentValue = steppedSpeedInputs.has(id) ? canonicalSpeedValues.get(id) : undefined;
+            const normalizedValue = window.qBittorrent.Misc.normalizeSpeedToKiB(value, currentValue);
+            if (Number.isFinite(normalizedValue))
+                setSpeedInputValue(id, normalizedValue);
+            return normalizedValue;
+        };
+
+        const updateSpeedSettings = () => {
+            const invalidInputs = new Set();
+            for (const id of speedInputIds) {
+                if (!dirtySpeedInputs.has(id))
+                    continue;
+
+                const input = document.getElementById(id);
+                const value = window.qBittorrent.Misc.inputValueToSpeed(input.value, currentSpeedSettings);
+                const currentValue = steppedSpeedInputs.has(id) ? canonicalSpeedValues.get(id) : undefined;
+                const normalizedValue = window.qBittorrent.Misc.normalizeSpeedToKiB(value, currentValue);
+                if (Number.isFinite(normalizedValue)) {
+                    canonicalSpeedValues.set(id, normalizedValue);
+                    dirtySpeedInputs.delete(id);
+                    steppedSpeedInputs.delete(id);
+                }
+                else {
+                    invalidInputs.add(id);
+                }
+            }
+
+            currentSpeedSettings = getSelectedSpeedSettings();
+            updateSpeedUnitLabels();
+
+            for (const id of speedInputIds) {
+                if (!invalidInputs.has(id) && canonicalSpeedValues.has(id))
+                    document.getElementById(id).value = window.qBittorrent.Misc.speedToInputValue(canonicalSpeedValues.get(id), currentSpeedSettings);
+            }
+        };
+
         const updateSchedulingEnabled = () => {
             const isLimitSchedulingEnabled = document.getElementById("limitSchedulingCheckbox").checked;
             document.getElementById("schedule_from_hour").disabled = !isLimitSchedulingEnabled;
@@ -2645,12 +2748,17 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                     updateFilterSettings();
 
                     // Speed tab
+                    currentSpeedSettings = window.qBittorrent.Misc.getSpeedSettings(pref);
+                    document.getElementById("speedUnitTypeSelect").value = currentSpeedSettings.speed_in_bits ? "bits" : "bytes";
+                    document.getElementById("speedPrefixSelect").value = currentSpeedSettings.speed_use_decimal_prefixes ? "decimal" : "binary";
+                    updateSpeedUnitLabels();
+
                     // Global Rate Limits
-                    document.getElementById("upLimitValue").value = (Number(pref.up_limit) / 1024);
-                    document.getElementById("dlLimitValue").value = (Number(pref.dl_limit) / 1024);
+                    setSpeedInputValue("upLimitValue", Number(pref.up_limit));
+                    setSpeedInputValue("dlLimitValue", Number(pref.dl_limit));
                     // Alternative Global Rate Limits
-                    document.getElementById("altUpLimitValue").value = (Number(pref.alt_up_limit) / 1024);
-                    document.getElementById("altDlLimitValue").value = (Number(pref.alt_dl_limit) / 1024);
+                    setSpeedInputValue("altUpLimitValue", Number(pref.alt_up_limit));
+                    setSpeedInputValue("altDlLimitValue", Number(pref.alt_dl_limit));
 
                     document.getElementById("enable_protocol_combobox").value = pref.bittorrent_protocol;
                     document.getElementById("limit_utp_rate_checkbox").checked = pref.limit_utp_rate;
@@ -2683,8 +2791,8 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                     document.getElementById("maxActiveUpValue").value = Number(pref.max_active_uploads);
                     document.getElementById("maxActiveToValue").value = Number(pref.max_active_torrents);
                     document.getElementById("dontCountSlowTorrentsCheckbox").checked = pref.dont_count_slow_torrents;
-                    document.getElementById("dlRateThresholdValue").value = Number(pref.slow_torrent_dl_rate_threshold);
-                    document.getElementById("ulRateThresholdValue").value = Number(pref.slow_torrent_ul_rate_threshold);
+                    setSpeedInputValue("dlRateThresholdValue", (Number(pref.slow_torrent_dl_rate_threshold) * 1024));
+                    setSpeedInputValue("ulRateThresholdValue", (Number(pref.slow_torrent_ul_rate_threshold) * 1024));
                     document.getElementById("torrentInactiveTimerValue").value = Number(pref.slow_torrent_inactive_timer);
                     updateQueueingSystem();
 
@@ -3047,15 +3155,19 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             settings["banned_IPs"] = document.getElementById("banned_IPs_textarea").value;
 
             // Speed tab
+            currentSpeedSettings = getSelectedSpeedSettings();
+            settings["speed_in_bits"] = currentSpeedSettings.speed_in_bits;
+            settings["speed_use_decimal_prefixes"] = currentSpeedSettings.speed_use_decimal_prefixes;
+
             // Global Rate Limits
-            const upLimit = Number(document.getElementById("upLimitValue").value) * 1024;
+            const upLimit = normalizeSpeedInput("upLimitValue");
             if (Number.isNaN(upLimit) || (upLimit < 0)) {
                 alert("QBT_TR(Global upload rate limit must be greater than 0 or disabled.)QBT_TR[CONTEXT=HttpServer]");
                 return;
             }
             settings["up_limit"] = upLimit;
 
-            const dlLimit = Number(document.getElementById("dlLimitValue").value) * 1024;
+            const dlLimit = normalizeSpeedInput("dlLimitValue");
             if (Number.isNaN(dlLimit) || (dlLimit < 0)) {
                 alert("QBT_TR(Global download rate limit must be greater than 0 or disabled.)QBT_TR[CONTEXT=HttpServer]");
                 return;
@@ -3063,14 +3175,14 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             settings["dl_limit"] = dlLimit;
 
             // Alternative Global Rate Limits
-            const altUpLimit = Number(document.getElementById("altUpLimitValue").value) * 1024;
+            const altUpLimit = normalizeSpeedInput("altUpLimitValue");
             if (Number.isNaN(altUpLimit) || (altUpLimit < 0)) {
                 alert("QBT_TR(Alternative upload rate limit must be greater than 0 or disabled.)QBT_TR[CONTEXT=HttpServer]");
                 return;
             }
             settings["alt_up_limit"] = altUpLimit;
 
-            const altDlLimit = Number(document.getElementById("altDlLimitValue").value) * 1024;
+            const altDlLimit = normalizeSpeedInput("altDlLimitValue");
             if (Number.isNaN(altDlLimit) || (altDlLimit < 0)) {
                 alert("QBT_TR(Alternative download rate limit must be greater than 0 or disabled.)QBT_TR[CONTEXT=HttpServer]");
                 return;
@@ -3128,14 +3240,14 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
                 settings["max_active_torrents"] = maxActiveTorrents;
                 settings["dont_count_slow_torrents"] = document.getElementById("dontCountSlowTorrentsCheckbox").checked;
 
-                const dlRateThreshold = Number(document.getElementById("dlRateThresholdValue").value);
+                const dlRateThreshold = normalizeSpeedInput("dlRateThresholdValue") / 1024;
                 if (Number.isNaN(dlRateThreshold) || (dlRateThreshold < 1)) {
                     alert("QBT_TR(Download rate threshold must be greater than 0.)QBT_TR[CONTEXT=HttpServer]");
                     return;
                 }
                 settings["slow_torrent_dl_rate_threshold"] = dlRateThreshold;
 
-                const ulRateThreshold = Number(document.getElementById("ulRateThresholdValue").value);
+                const ulRateThreshold = normalizeSpeedInput("ulRateThresholdValue") / 1024;
                 if (Number.isNaN(ulRateThreshold) || (ulRateThreshold < 1)) {
                     alert("QBT_TR(Upload rate threshold must be greater than 0.)QBT_TR[CONTEXT=HttpServer]");
                     return;
@@ -3476,6 +3588,44 @@ Use ';' to split multiple entries. Can use wildcard '*'.)QBT_TR[CONTEXT=OptionsD
             document.getElementById("networkInterface").addEventListener("change", function(event) {
                 updateInterfaceAddresses(this.value, "");
             });
+            document.getElementById("speedUnitTypeSelect").addEventListener("change", updateSpeedSettings);
+            document.getElementById("speedPrefixSelect").addEventListener("change", updateSpeedSettings);
+            for (const id of speedInputIds) {
+                const input = document.getElementById(id);
+                if (input.type === "number") {
+                    input.addEventListener("pointerdown", () => {
+                        pendingSpeedSteps.add(id);
+                    });
+                    input.addEventListener("pointerup", () => {
+                        setTimeout(() => {
+                            pendingSpeedSteps.delete(id);
+                        }, 0);
+                    });
+                    input.addEventListener("keydown", (event) => {
+                        if ((event.key === "ArrowUp") || (event.key === "ArrowDown"))
+                            pendingSpeedSteps.add(id);
+                        else
+                            pendingSpeedSteps.delete(id);
+                    });
+                    input.addEventListener("keyup", (event) => {
+                        if ((event.key === "ArrowUp") || (event.key === "ArrowDown"))
+                            pendingSpeedSteps.delete(id);
+                    });
+                }
+                input.addEventListener("input", () => {
+                    dirtySpeedInputs.add(id);
+                    if (pendingSpeedSteps.has(id)) {
+                        steppedSpeedInputs.add(id);
+                        normalizeSpeedInput(id);
+                    }
+                    else {
+                        steppedSpeedInputs.delete(id);
+                    }
+                });
+                input.addEventListener("change", () => {
+                    normalizeSpeedInput(id);
+                });
+            }
 
             loadPreferences();
 

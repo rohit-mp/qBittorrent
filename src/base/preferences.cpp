@@ -2158,6 +2158,35 @@ void Preferences::setSpeedWidgetGraphEnable(const int id, const bool enable)
     setValue(u"SpeedWidget/graph_enable_%1"_s.arg(id), enable);
 }
 
+Utils::Misc::UnitType Preferences::speedUnitType() const
+{
+    return value(u"Preferences/Units/SpeedInBits"_s, false)
+            ? Utils::Misc::UnitType::Bit
+            : Utils::Misc::UnitType::Byte;
+}
+
+void Preferences::setSpeedUnitType(const Utils::Misc::UnitType type)
+{
+    const bool speedInBits = (type == Utils::Misc::UnitType::Bit);
+    if (speedInBits == (speedUnitType() == Utils::Misc::UnitType::Bit))
+        return;
+
+    setValue(u"Preferences/Units/SpeedInBits"_s, speedInBits);
+}
+
+bool Preferences::speedUseDecimalPrefixes() const
+{
+    return value(u"Preferences/Units/SpeedUseDecimalPrefixes"_s, false);
+}
+
+void Preferences::setSpeedUseDecimalPrefixes(const bool useDecimalPrefixes)
+{
+    if (useDecimalPrefixes == speedUseDecimalPrefixes())
+        return;
+
+    setValue(u"Preferences/Units/SpeedUseDecimalPrefixes"_s, useDecimalPrefixes);
+}
+
 bool Preferences::isAddNewTorrentDialogEnabled() const
 {
     return value(u"AddNewTorrentDialog/Enabled"_s, true);

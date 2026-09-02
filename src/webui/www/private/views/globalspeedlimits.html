@@ -9,43 +9,78 @@
             };
         };
 
-        const setupSlider = (sliderId, input, limit) => {
-            const update = (value) => {
-                input.value = (value === 0) ? "∞" : value;
-            };
+        const speedInputStates = new WeakMap();
 
-            input.addEventListener("change", (e) => {
-                let value = Number(e.target.value);
-                if (Number.isNaN(value) || (value < 0))
-                    value = 0;
+        const setSpeedInputValue = (input, value) => {
+            const state = speedInputStates.get(input);
+            state.value = value;
+            state.dirty = false;
 
-                slider.value = value;
-                update(value);
-            });
+            const displayValue = window.qBittorrent.Misc.speedToInputValue(value, state.settings);
+            input.value = (value === 0) ? "∞" : displayValue;
+            if (displayValue > state.slider.max)
+                state.slider.max = displayValue;
+            state.slider.value = displayValue;
+        };
 
+        const normalizeSpeedInput = (input, requestedValue = undefined) => {
+            const state = speedInputStates.get(input);
+            const isStepping = (requestedValue !== undefined);
+            if (!isStepping && !state.dirty)
+                return state.value;
+
+            const value = isStepping
+                ? requestedValue
+                : window.qBittorrent.Misc.inputValueToSpeed(input.value, state.settings);
+            const currentValue = isStepping ? state.value : undefined;
+            const normalizedValue = window.qBittorrent.Misc.normalizeSpeedToKiB(value, currentValue) || 0;
+            setSpeedInputValue(input, normalizedValue);
+            return normalizedValue;
+        };
+
+        const setupSlider = (sliderId, input, limit, settings) => {
             const slider = document.getElementById(sliderId);
-            if (limit > slider.max)
-                slider.max = limit;
-            slider.value = limit;
-            slider.addEventListener("input", (e) => {
-                update(Number(e.target.value));
+            slider.max = window.qBittorrent.Misc.speedToInputValue((10000 * 1024), settings);
+            speedInputStates.set(input, {
+                dirty: false,
+                settings: settings,
+                slider: slider,
+                value: limit
             });
 
-            update(limit);
+            input.addEventListener("input", () => {
+                speedInputStates.get(input).dirty = true;
+            });
+            input.addEventListener("change", () => {
+                normalizeSpeedInput(input);
+            });
+            slider.addEventListener("input", (e) => {
+                const value = window.qBittorrent.Misc.inputValueToSpeed(e.target.value, settings);
+                normalizeSpeedInput(input, value);
+            });
+
+            setSpeedInputValue(input, limit);
         };
 
         const init = () => {
+            const speedSettings = window.qBittorrent.Misc.getSpeedSettings();
+            const speedUnit = window.qBittorrent.Misc.getSpeedInputUnit(speedSettings);
+            const page = document.getElementById("globalSpeedLimitsPage");
+            for (const label of page.querySelectorAll(".speedUnitLabel"))
+                label.textContent = speedUnit;
+
             const uploadValue = document.getElementById("uploadValue");
             const downloadValue = document.getElementById("downloadValue");
             const altUploadValue = document.getElementById("altUploadValue");
             const altDownloadValue = document.getElementById("altDownloadValue");
 
             const applyButton = document.getElementById("applyButton");
+            applyButton.disabled = true;
             applyButton.addEventListener("click", () => {
-                const upload = Number(uploadValue.value) * 1024 || 0;
-                const download = Number(downloadValue.value) * 1024 || 0;
-                const altUpload = Number(altUploadValue.value) * 1024 || 0;
-                const altDownload = Number(altDownloadValue.value) * 1024 || 0;
+                const upload = normalizeSpeedInput(uploadValue);
+                const download = normalizeSpeedInput(downloadValue);
+                const altUpload = normalizeSpeedInput(altUploadValue);
+                const altDownload = normalizeSpeedInput(altDownloadValue);
 
                 fetch("api/v2/transfer/setSpeedLimits", {
                     method: "POST",
@@ -70,10 +105,11 @@
                 })
                 .then(async (response) => {
                     const limits = await response.json();
-                    setupSlider("uploadSlider", uploadValue, (limits.up_limit / 1024));
-                    setupSlider("downloadSlider", downloadValue, (limits.dl_limit / 1024));
-                    setupSlider("altUploadSlider", altUploadValue, (limits.alt_up_limit / 1024));
-                    setupSlider("altDownloadSlider", altDownloadValue, (limits.alt_dl_limit / 1024));
+                    setupSlider("uploadSlider", uploadValue, Number(limits.up_limit), speedSettings);
+                    setupSlider("downloadSlider", downloadValue, Number(limits.dl_limit), speedSettings);
+                    setupSlider("altUploadSlider", altUploadValue, Number(limits.alt_up_limit), speedSettings);
+                    setupSlider("altDownloadSlider", altDownloadValue, Number(limits.alt_dl_limit), speedSettings);
+                    applyButton.disabled = false;
                 });
         };
 
@@ -114,17 +150,17 @@
         </div>
 
         <label for="uploadSlider">QBT_TR(Upload:)QBT_TR[CONTEXT=SpeedLimit]</label>
-        <input type="range" id="uploadSlider" min="0" max="10000">
+        <input type="range" id="uploadSlider" min="0" max="10000" step="any">
 
         <input type="text" id="uploadValue" aria-label="QBT_TR(Upload speed)QBT_TR[CONTEXT=SpeedLimit]">
-        <span>QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
+        <span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
 
 
         <label for="downloadSlider">QBT_TR(Download:)QBT_TR[CONTEXT=SpeedLimit]</label>
-        <input type="range" id="downloadSlider" min="0" max="10000">
+        <input type="range" id="downloadSlider" min="0" max="10000" step="any">
 
         <input type="text" id="downloadValue" aria-label="QBT_TR(Download speed)QBT_TR[CONTEXT=SpeedLimit]">
-        <span>QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
+        <span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
 
     </div>
 </fieldset>
@@ -136,15 +172,15 @@
         </div>
 
         <label for="altUploadSlider">QBT_TR(Upload:)QBT_TR[CONTEXT=SpeedLimit]</label>
-        <input type="range" id="altUploadSlider" min="0" max="10000">
+        <input type="range" id="altUploadSlider" min="0" max="10000" step="any">
         <input type="text" id="altUploadValue" aria-label="QBT_TR(Alternative upload speed)QBT_TR[CONTEXT=SpeedLimit]">
 
-        <span>QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
+        <span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
 
         <label for="altDownloadSlider">QBT_TR(Download:)QBT_TR[CONTEXT=SpeedLimit]</label>
-        <input type="range" id="altDownloadSlider" min="0" max="10000">
+        <input type="range" id="altDownloadSlider" min="0" max="10000" step="any">
         <input type="text" id="altDownloadValue" aria-label="QBT_TR(Alternative download speed)QBT_TR[CONTEXT=SpeedLimit]">
-        <span>QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
+        <span class="speedUnitLabel">QBT_TR(KiB/s)QBT_TR[CONTEXT=SpeedLimit]</span>
     </div>
 </fieldset>
 <div style="text-align: center; margin-top: 10px;">

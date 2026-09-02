@@ -249,18 +249,23 @@ void StatusBar::updateExternalAddressesVisibility()
 void StatusBar::updateSpeedLabels()
 {
     const BitTorrent::SessionStatus &sessionStatus = BitTorrent::Session::instance()->status();
+    const auto *pref = Preferences::instance();
+    const auto speedUnitType = pref->speedUnitType();
+    const bool useDecimalPrefixes = pref->speedUseDecimalPrefixes();
 
-    QString dlSpeedLbl = Utils::Misc::friendlyUnit(sessionStatus.payloadDownloadRate, true);
+    QString dlSpeedLbl = Utils::Misc::friendlySpeedUnit(
+            sessionStatus.payloadDownloadRate, speedUnitType, useDecimalPrefixes);
     const int dlSpeedLimit = BitTorrent::Session::instance()->downloadSpeedLimit();
     if (dlSpeedLimit > 0)
-        dlSpeedLbl += u" [" + Utils::Misc::friendlyUnit(dlSpeedLimit, true) + u']';
+        dlSpeedLbl += u" [" + Utils::Misc::friendlySpeedUnit(dlSpeedLimit, speedUnitType, useDecimalPrefixes) + u']';
     dlSpeedLbl += u" (" + Utils::Misc::friendlyUnit(sessionStatus.totalPayloadDownload) + u')';
     m_dlSpeedLbl->setText(dlSpeedLbl);
 
-    QString upSpeedLbl = Utils::Misc::friendlyUnit(sessionStatus.payloadUploadRate, true);
+    QString upSpeedLbl = Utils::Misc::friendlySpeedUnit(
+            sessionStatus.payloadUploadRate, speedUnitType, useDecimalPrefixes);
     const int upSpeedLimit = BitTorrent::Session::instance()->uploadSpeedLimit();
     if (upSpeedLimit > 0)
-        upSpeedLbl += u" [" + Utils::Misc::friendlyUnit(upSpeedLimit, true) + u']';
+        upSpeedLbl += u" [" + Utils::Misc::friendlySpeedUnit(upSpeedLimit, speedUnitType, useDecimalPrefixes) + u']';
     upSpeedLbl += u" (" + Utils::Misc::friendlyUnit(sessionStatus.totalPayloadUpload) + u')';
     m_upSpeedLbl->setText(upSpeedLbl);
 }

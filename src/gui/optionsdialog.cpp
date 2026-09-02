@@ -31,6 +31,7 @@
 #include "optionsdialog.h"
 
 #include <algorithm>
+#include <cmath>
 #include <chrono>
 #include <limits>
 
@@ -42,6 +43,8 @@
 #include <QEvent>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QSignalBlocker>
+#include <QSpinBox>
 #include <QStyleFactory>
 #include <QSystemTrayIcon>
 
@@ -1089,13 +1092,20 @@ void OptionsDialog::loadSpeedTabOptions()
     const auto *pref = Preferences::instance();
     const auto *session = BitTorrent::Session::instance();
 
+    m_speedUnitType = pref->speedUnitType();
+    m_speedUseDecimalPrefixes = pref->speedUseDecimalPrefixes();
+    m_ui->speedUnitTypeCombo->setCurrentIndex(
+            (m_speedUnitType == Utils::Misc::UnitType::Bit) ? 1 : 0);
+    m_ui->speedPrefixCombo->setCurrentIndex(m_speedUseDecimalPrefixes ? 1 : 0);
+
     m_ui->labelGlobalRate->setPixmap(UIThemeManager::instance()->getScaledPixmap(u"slow_off"_s, Utils::Gui::mediumIconSize(this).height()));
-    m_ui->spinUploadLimit->setValue(session->globalUploadSpeedLimit() / 1024);
-    m_ui->spinDownloadLimit->setValue(session->globalDownloadSpeedLimit() / 1024);
+    m_speedValues.uploadLimit = std::max(0, session->globalUploadSpeedLimit());
+    m_speedValues.downloadLimit = std::max(0, session->globalDownloadSpeedLimit());
 
     m_ui->labelAltRate->setPixmap(UIThemeManager::instance()->getScaledPixmap(u"slow"_s, Utils::Gui::mediumIconSize(this).height()));
-    m_ui->spinUploadLimitAlt->setValue(session->altGlobalUploadSpeedLimit() / 1024);
-    m_ui->spinDownloadLimitAlt->setValue(session->altGlobalDownloadSpeedLimit() / 1024);
+    m_speedValues.altUploadLimit = std::max(0, session->altGlobalUploadSpeedLimit());
+    m_speedValues.altDownloadLimit = std::max(0, session->altGlobalDownloadSpeedLimit());
+    updateSpeedUnitEditors();
 
     m_ui->comboBoxScheduleDays->addItems(translatedWeekdayNames());
 
@@ -1121,6 +1131,41 @@ void OptionsDialog::loadSpeedTabOptions()
 
     connect(m_ui->spinUploadLimitAlt, qSpinBoxValueChanged, this, &ThisType::enableApplyButton);
     connect(m_ui->spinDownloadLimitAlt, qSpinBoxValueChanged, this, &ThisType::enableApplyButton);
+    connect(m_ui->spinUploadLimit, qSpinBoxValueChanged, this, [this](const int value)
+    {
+        if (!m_updatingSpeedUnitEditors)
+        {
+            m_speedValues.uploadLimit = speedUnitEditorValue(value, m_speedValues.uploadLimit);
+            updateSpeedUnitEditor(m_ui->spinUploadLimit, m_speedValues.uploadLimit);
+        }
+    });
+    connect(m_ui->spinDownloadLimit, qSpinBoxValueChanged, this, [this](const int value)
+    {
+        if (!m_updatingSpeedUnitEditors)
+        {
+            m_speedValues.downloadLimit = speedUnitEditorValue(value, m_speedValues.downloadLimit);
+            updateSpeedUnitEditor(m_ui->spinDownloadLimit, m_speedValues.downloadLimit);
+        }
+    });
+    connect(m_ui->spinUploadLimitAlt, qSpinBoxValueChanged, this, [this](const int value)
+    {
+        if (!m_updatingSpeedUnitEditors)
+        {
+            m_speedValues.altUploadLimit = speedUnitEditorValue(value, m_speedValues.altUploadLimit);
+            updateSpeedUnitEditor(m_ui->spinUploadLimitAlt, m_speedValues.altUploadLimit);
+        }
+    });
+    connect(m_ui->spinDownloadLimitAlt, qSpinBoxValueChanged, this, [this](const int value)
+    {
+        if (!m_updatingSpeedUnitEditors)
+        {
+            m_speedValues.altDownloadLimit = speedUnitEditorValue(value, m_speedValues.altDownloadLimit);
+            updateSpeedUnitEditor(m_ui->spinDownloadLimitAlt, m_speedValues.altDownloadLimit);
+        }
+    });
+
+    connect(m_ui->speedUnitTypeCombo, qComboBoxCurrentIndexChanged, this, &ThisType::handleSpeedUnitChanged);
+    connect(m_ui->speedPrefixCombo, qComboBoxCurrentIndexChanged, this, &ThisType::handleSpeedUnitChanged);
 
     connect(m_ui->groupBoxSchedule, &QGroupBox::toggled, this, &ThisType::enableApplyButton);
     connect(m_ui->timeEditScheduleFrom, &QDateTimeEdit::timeChanged, this, &ThisType::enableApplyButton);
@@ -1142,11 +1187,13 @@ void OptionsDialog::saveSpeedTabOptions() const
     auto *pref = Preferences::instance();
     auto *session = BitTorrent::Session::instance();
 
-    session->setGlobalUploadSpeedLimit(m_ui->spinUploadLimit->value() * 1024);
-    session->setGlobalDownloadSpeedLimit(m_ui->spinDownloadLimit->value() * 1024);
+    session->setGlobalUploadSpeedLimit(static_cast<int>(m_speedValues.uploadLimit));
+    session->setGlobalDownloadSpeedLimit(static_cast<int>(m_speedValues.downloadLimit));
 
-    session->setAltGlobalUploadSpeedLimit(m_ui->spinUploadLimitAlt->value() * 1024);
-    session->setAltGlobalDownloadSpeedLimit(m_ui->spinDownloadLimitAlt->value() * 1024);
+    session->setAltGlobalUploadSpeedLimit(static_cast<int>(m_speedValues.altUploadLimit));
+    session->setAltGlobalDownloadSpeedLimit(static_cast<int>(m_speedValues.altDownloadLimit));
+    pref->setSpeedUnitType(m_speedUnitType);
+    pref->setSpeedUseDecimalPrefixes(m_speedUseDecimalPrefixes);
 
     session->setBandwidthSchedulerEnabled(m_ui->groupBoxSchedule->isChecked());
     pref->setSchedulerStartTime(m_ui->timeEditScheduleFrom->time());
@@ -1161,6 +1208,52 @@ void OptionsDialog::saveSpeedTabOptions() const
     pref->setSpeedInDockEnabled(m_ui->checkShowSpeedInDock->isChecked());
     pref->setMacOSMenuBarIconEnabled(m_ui->checkShowMenuBarIcon->isChecked());
 #endif
+}
+
+void OptionsDialog::handleSpeedUnitChanged()
+{
+    const auto speedUnitType = (m_ui->speedUnitTypeCombo->currentIndex() == 1)
+            ? Utils::Misc::UnitType::Bit
+            : Utils::Misc::UnitType::Byte;
+    const bool useDecimalPrefixes = (m_ui->speedPrefixCombo->currentIndex() == 1);
+    if ((speedUnitType == m_speedUnitType) && (useDecimalPrefixes == m_speedUseDecimalPrefixes))
+        return;
+
+    m_speedUnitType = speedUnitType;
+    m_speedUseDecimalPrefixes = useDecimalPrefixes;
+    updateSpeedUnitEditors();
+    enableApplyButton();
+}
+
+void OptionsDialog::updateSpeedUnitEditors()
+{
+    m_updatingSpeedUnitEditors = true;
+    updateSpeedUnitEditor(m_ui->spinUploadLimit, m_speedValues.uploadLimit);
+    updateSpeedUnitEditor(m_ui->spinDownloadLimit, m_speedValues.downloadLimit);
+    updateSpeedUnitEditor(m_ui->spinUploadLimitAlt, m_speedValues.altUploadLimit);
+    updateSpeedUnitEditor(m_ui->spinDownloadLimitAlt, m_speedValues.altDownloadLimit);
+    updateSpeedUnitEditor(m_ui->spinDownloadRateForSlowTorrents, m_speedValues.slowTorrentDownloadRate);
+    updateSpeedUnitEditor(m_ui->spinUploadRateForSlowTorrents, m_speedValues.slowTorrentUploadRate);
+    m_updatingSpeedUnitEditors = false;
+}
+
+void OptionsDialog::updateSpeedUnitEditor(QSpinBox *editor, const qint64 bytes)
+{
+    const QSignalBlocker blocker {editor};
+    const Utils::Misc::Unit unit = Utils::Misc::speedInputUnit(m_speedUnitType, m_speedUseDecimalPrefixes);
+    editor->setSuffix(u" "_s + Utils::Misc::unitString(unit, true));
+    editor->setMaximum(static_cast<int>(std::ceil(Utils::Misc::bytesToUnitValue(
+            Utils::Misc::normalizeKibiByteRate(std::numeric_limits<int>::max()), unit))));
+    editor->setValue(qBound(editor->minimum()
+            , qRound(Utils::Misc::bytesToUnitValue(bytes, unit)), editor->maximum()));
+}
+
+qint64 OptionsDialog::speedUnitEditorValue(const int value, const qint64 currentBytes) const
+{
+    const Utils::Misc::Unit unit = Utils::Misc::speedInputUnit(m_speedUnitType, m_speedUseDecimalPrefixes);
+    const auto bytes = Utils::Misc::unitValueToBytes(value, unit);
+    Q_ASSERT(bytes);
+    return Utils::Misc::normalizeKibiByteRate(*bytes, currentBytes);
 }
 
 void OptionsDialog::loadBittorrentTabOptions()
@@ -1187,8 +1280,10 @@ void OptionsDialog::loadBittorrentTabOptions()
     m_ui->labelDownloadRateForSlowTorrents->setToolTip(slowTorrentsExplanation);
     m_ui->labelUploadRateForSlowTorrents->setToolTip(slowTorrentsExplanation);
     m_ui->labelSlowTorrentInactivityTimer->setToolTip(slowTorrentsExplanation);
-    m_ui->spinDownloadRateForSlowTorrents->setValue(session->downloadRateForSlowTorrents());
-    m_ui->spinUploadRateForSlowTorrents->setValue(session->uploadRateForSlowTorrents());
+    m_speedValues.slowTorrentDownloadRate = (static_cast<qint64>(session->downloadRateForSlowTorrents()) * 1024);
+    m_speedValues.slowTorrentUploadRate = (static_cast<qint64>(session->uploadRateForSlowTorrents()) * 1024);
+    updateSpeedUnitEditor(m_ui->spinDownloadRateForSlowTorrents, m_speedValues.slowTorrentDownloadRate);
+    updateSpeedUnitEditor(m_ui->spinUploadRateForSlowTorrents, m_speedValues.slowTorrentUploadRate);
     m_ui->spinSlowTorrentsInactivityTimer->setValue(session->slowTorrentsInactivityTimer());
 
     m_ui->spinMaxRatio->setMaximum(std::numeric_limits<int>::max());
@@ -1271,6 +1366,26 @@ void OptionsDialog::loadBittorrentTabOptions()
     connect(m_ui->checkIgnoreSlowTorrentsForQueueing, &QGroupBox::toggled, this, &ThisType::enableApplyButton);
     connect(m_ui->spinDownloadRateForSlowTorrents, qSpinBoxValueChanged, this, &ThisType::enableApplyButton);
     connect(m_ui->spinUploadRateForSlowTorrents, qSpinBoxValueChanged, this, &ThisType::enableApplyButton);
+    connect(m_ui->spinDownloadRateForSlowTorrents, qSpinBoxValueChanged, this, [this](const int value)
+    {
+        if (!m_updatingSpeedUnitEditors)
+        {
+            m_speedValues.slowTorrentDownloadRate = speedUnitEditorValue(
+                    value, m_speedValues.slowTorrentDownloadRate);
+            updateSpeedUnitEditor(
+                    m_ui->spinDownloadRateForSlowTorrents, m_speedValues.slowTorrentDownloadRate);
+        }
+    });
+    connect(m_ui->spinUploadRateForSlowTorrents, qSpinBoxValueChanged, this, [this](const int value)
+    {
+        if (!m_updatingSpeedUnitEditors)
+        {
+            m_speedValues.slowTorrentUploadRate = speedUnitEditorValue(
+                    value, m_speedValues.slowTorrentUploadRate);
+            updateSpeedUnitEditor(
+                    m_ui->spinUploadRateForSlowTorrents, m_speedValues.slowTorrentUploadRate);
+        }
+    });
     connect(m_ui->spinSlowTorrentsInactivityTimer, qSpinBoxValueChanged, this, &ThisType::enableApplyButton);
 
     connect(m_ui->checkMaxRatio, &QAbstractButton::toggled, m_ui->spinMaxRatio, &QWidget::setEnabled);
@@ -1312,8 +1427,10 @@ void OptionsDialog::saveBittorrentTabOptions() const
     session->setMaxActiveUploads(m_ui->spinMaxActiveUploads->value());
     session->setMaxActiveTorrents(m_ui->spinMaxActiveTorrents->value());
     session->setIgnoreSlowTorrentsForQueueing(m_ui->checkIgnoreSlowTorrentsForQueueing->isChecked());
-    session->setDownloadRateForSlowTorrents(m_ui->spinDownloadRateForSlowTorrents->value());
-    session->setUploadRateForSlowTorrents(m_ui->spinUploadRateForSlowTorrents->value());
+    session->setDownloadRateForSlowTorrents(
+            static_cast<int>(m_speedValues.slowTorrentDownloadRate / 1024));
+    session->setUploadRateForSlowTorrents(
+            static_cast<int>(m_speedValues.slowTorrentUploadRate / 1024));
     session->setSlowTorrentsInactivityTimer(m_ui->spinSlowTorrentsInactivityTimer->value());
 
     const QList<BitTorrent::ShareLimitAction> actIndex =

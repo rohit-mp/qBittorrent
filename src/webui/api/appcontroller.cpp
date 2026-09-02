@@ -291,6 +291,8 @@ void AppController::preferencesAction()
     data[u"limit_utp_rate"_s] = session->isUTPRateLimited();
     data[u"limit_tcp_overhead"_s] = session->includeOverheadInLimits();
     data[u"limit_lan_peers"_s] = !session->ignoreLimitsOnLAN();
+    data[u"speed_in_bits"_s] = (pref->speedUnitType() == Utils::Misc::UnitType::Bit);
+    data[u"speed_use_decimal_prefixes"_s] = pref->speedUseDecimalPrefixes();
     // Scheduling
     data[u"scheduler_enabled"_s] = session->isBandwidthSchedulerEnabled();
     const QTime start_time = pref->getSchedulerStartTime();
@@ -821,6 +823,10 @@ void AppController::setPreferencesAction()
         session->setIncludeOverheadInLimits(it.value().toBool());
     if (hasKey(u"limit_lan_peers"_s))
         session->setIgnoreLimitsOnLAN(!it.value().toBool());
+    if (hasKey(u"speed_in_bits"_s))
+        pref->setSpeedUnitType(it.value().toBool() ? Utils::Misc::UnitType::Bit : Utils::Misc::UnitType::Byte);
+    if (hasKey(u"speed_use_decimal_prefixes"_s))
+        pref->setSpeedUseDecimalPrefixes(it.value().toBool());
     // Scheduling
     if (hasKey(u"scheduler_enabled"_s))
         session->setBandwidthSchedulerEnabled(it.value().toBool());

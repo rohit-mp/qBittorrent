@@ -34,9 +34,11 @@
 #include "base/net/proxytype.h"
 #include "base/pathfwd.h"
 #include "base/settingvalue.h"
+#include "base/utils/misc.h"
 #include "guiapplicationcomponent.h"
 
 class QListWidgetItem;
+class QSpinBox;
 
 class AdvancedSettings;
 
@@ -131,6 +133,10 @@ private:
 
     void loadSpeedTabOptions();
     void saveSpeedTabOptions() const;
+    void handleSpeedUnitChanged();
+    void updateSpeedUnitEditors();
+    void updateSpeedUnitEditor(QSpinBox *editor, qint64 bytes);
+    qint64 speedUnitEditorValue(int value, qint64 currentBytes) const;
 
     void loadBittorrentTabOptions();
     void saveBittorrentTabOptions() const;
@@ -209,6 +215,19 @@ private:
     AdvancedSettings *m_advancedSettings = nullptr;
 
     bool m_refreshingIpFilter = false;
+
+    Utils::Misc::UnitType m_speedUnitType = Utils::Misc::UnitType::Byte;
+    bool m_speedUseDecimalPrefixes = false;
+    bool m_updatingSpeedUnitEditors = false;
+    struct
+    {
+        qint64 uploadLimit = 0;
+        qint64 downloadLimit = 0;
+        qint64 altUploadLimit = 0;
+        qint64 altDownloadLimit = 0;
+        qint64 slowTorrentDownloadRate = 0;
+        qint64 slowTorrentUploadRate = 0;
+    } m_speedValues;
 
 #ifndef DISABLE_WEBUI
     QString m_currentAPIKey;

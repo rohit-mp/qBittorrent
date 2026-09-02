@@ -36,6 +36,11 @@ window.qBittorrent.Misc ??= (() => {
             isHttpUrl: isHttpUrl,
             createDebounceHandler: createDebounceHandler,
             filterInPlace: filterInPlace,
+            getSpeedSettings: getSpeedSettings,
+            getSpeedInputUnit: getSpeedInputUnit,
+            speedToInputValue: speedToInputValue,
+            inputValueToSpeed: inputValueToSpeed,
+            normalizeSpeedToKiB: normalizeSpeedToKiB,
             friendlyUnit: friendlyUnit,
             friendlyDuration: friendlyDuration,
             friendlyPercentage: friendlyPercentage,
@@ -122,14 +127,91 @@ window.qBittorrent.Misc ??= (() => {
         array.splice(j, (array.length - j));
     };
 
+    const getSpeedSettings = (settings = undefined) => {
+        if (settings === undefined) {
+            settings = window.qBittorrent.Cache?.preferences?.get?.();
+            if ((settings === undefined) && (window.parent !== window))
+                settings = window.parent.qBittorrent?.Cache?.preferences?.get?.();
+        }
+
+        return {
+            speed_in_bits: (settings?.speed_in_bits === true),
+            speed_use_decimal_prefixes: (settings?.speed_use_decimal_prefixes === true)
+        };
+    };
+
+    const getSpeedInputUnit = (settings = undefined) => {
+        const speedSettings = getSpeedSettings(settings);
+        if (speedSettings.speed_in_bits) {
+            return speedSettings.speed_use_decimal_prefixes
+                ? "QBT_TR(kbit/s)QBT_TR[CONTEXT=misc]"
+                : "QBT_TR(Kibit/s)QBT_TR[CONTEXT=misc]";
+        }
+
+        return speedSettings.speed_use_decimal_prefixes
+            ? "QBT_TR(kB/s)QBT_TR[CONTEXT=misc]"
+            : "QBT_TR(KiB/s)QBT_TR[CONTEXT=misc]";
+    };
+
+    const speedInputFactor = (settings) => {
+        const speedSettings = getSpeedSettings(settings);
+        const prefixFactor = speedSettings.speed_use_decimal_prefixes ? 1000 : 1024;
+        return speedSettings.speed_in_bits ? (prefixFactor / 8) : prefixFactor;
+    };
+
+    const nonNegativeNumber = (value) => {
+        try {
+            const numericValue = Number(value);
+            return (Number.isFinite(numericValue) && (numericValue >= 0)) ? numericValue : Number.NaN;
+        }
+        catch (error) {
+            return Number.NaN;
+        }
+    };
+
+    const speedToInputValue = (value, settings = undefined) => {
+        const numericValue = nonNegativeNumber(value);
+        return numericValue / speedInputFactor(settings);
+    };
+
+    const inputValueToSpeed = (value, settings = undefined) => {
+        const numericValue = nonNegativeNumber(value);
+        return Math.round(numericValue * speedInputFactor(settings));
+    };
+
+    const MAX_KIB_SPEED = 2147482624;
+
+    const normalizeSpeedToKiB = (value, currentValue = undefined) => {
+        const numericValue = nonNegativeNumber(value);
+        if (Number.isNaN(numericValue) || (numericValue === 0))
+            return numericValue;
+
+        let normalizedValue = Math.min(Math.max(Math.floor((numericValue / 1024) + 0.5) * 1024, 1024), MAX_KIB_SPEED);
+        const currentNumericValue = nonNegativeNumber(currentValue);
+        if (numericValue > currentNumericValue) {
+            if (normalizedValue <= currentNumericValue) {
+                normalizedValue = (currentNumericValue >= MAX_KIB_SPEED)
+                    ? MAX_KIB_SPEED
+                    : normalizeSpeedToKiB(currentNumericValue + 1024);
+            }
+        }
+        else if ((numericValue < currentNumericValue) && (normalizedValue >= currentNumericValue)) {
+            normalizedValue = (currentNumericValue <= 1024)
+                ? 0
+                : normalizeSpeedToKiB(currentNumericValue - 1024);
+        }
+
+        return normalizedValue;
+    };
+
     /*
      * JS counterpart of the function in src/misc.cpp
      */
     const friendlyUnit = (value, isSpeed) => {
-        if ((value === undefined) || (value === null) || Number.isNaN(value) || (value < 0))
+        if (!Number.isFinite(value) || (value < 0))
             return "QBT_TR(Unknown)QBT_TR[CONTEXT=misc]";
 
-        const units = [
+        const iecByteUnits = [
             "QBT_TR(B)QBT_TR[CONTEXT=misc]",
             "QBT_TR(KiB)QBT_TR[CONTEXT=misc]",
             "QBT_TR(MiB)QBT_TR[CONTEXT=misc]",
@@ -138,6 +220,46 @@ window.qBittorrent.Misc ??= (() => {
             "QBT_TR(PiB)QBT_TR[CONTEXT=misc]",
             "QBT_TR(EiB)QBT_TR[CONTEXT=misc]"
         ];
+        const siByteUnits = [
+            "QBT_TR(B)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(kB)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(MB)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(GB)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(TB)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(PB)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(EB)QBT_TR[CONTEXT=misc]"
+        ];
+        const iecBitUnits = [
+            "QBT_TR(bit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Kibit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Mibit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Gibit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Tibit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Pibit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Eibit)QBT_TR[CONTEXT=misc]"
+        ];
+        const siBitUnits = [
+            "QBT_TR(bit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(kbit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Mbit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Gbit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Tbit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Pbit)QBT_TR[CONTEXT=misc]",
+            "QBT_TR(Ebit)QBT_TR[CONTEXT=misc]"
+        ];
+
+        const speedSettings = isSpeed ? getSpeedSettings() : getSpeedSettings({});
+        const divisor = (isSpeed && speedSettings.speed_use_decimal_prefixes) ? 1000 : 1024;
+        let units = iecByteUnits;
+        if (isSpeed) {
+            if (speedSettings.speed_in_bits) {
+                value *= 8;
+                units = speedSettings.speed_use_decimal_prefixes ? siBitUnits : iecBitUnits;
+            }
+            else if (speedSettings.speed_use_decimal_prefixes) {
+                units = siByteUnits;
+            }
+        }
 
         const friendlyUnitPrecision = (sizeUnit) => {
             if (sizeUnit <= 2) // KiB, MiB
@@ -149,8 +271,8 @@ window.qBittorrent.Misc ??= (() => {
         };
 
         let i = 0;
-        while ((value >= 1024) && (i < 6)) {
-            value /= 1024;
+        while ((value >= divisor) && (i < 6)) {
+            value /= divisor;
             ++i;
         }
 

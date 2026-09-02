@@ -31,6 +31,10 @@
 #include <QDialog>
 
 #include "base/settingvalue.h"
+#include "base/utils/misc.h"
+
+class QSlider;
+class QSpinBox;
 
 namespace Ui
 {
@@ -50,13 +54,17 @@ public slots:
     void accept() override;
 
 private:
+    void setupEditor(QSlider *slider, QSpinBox *editor, qint64 bytes);
+    qint64 updateSpeedUnitEditorValue(QSlider *slider, QSpinBox *editor, int value, qint64 currentBytes);
+
     Ui::SpeedLimitDialog *m_ui = nullptr;
     SettingValue<QSize> m_storeDialogSize;
+    Utils::Misc::Unit m_speedUnit {Utils::Misc::UnitType::Byte, Utils::Misc::UnitPrefix::Kibi};
     struct
     {
-        int uploadSpeedLimit;
-        int downloadSpeedLimit;
-        int altUploadSpeedLimit;
-        int altDownloadSpeedLimit;
-    } m_initialValues;
+        qint64 uploadSpeedLimit = 0;
+        qint64 downloadSpeedLimit = 0;
+        qint64 altUploadSpeedLimit = 0;
+        qint64 altDownloadSpeedLimit = 0;
+    } m_initialValues, m_values;
 };

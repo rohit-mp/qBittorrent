@@ -37,6 +37,7 @@
 
 #include "base/bittorrent/session.h"
 #include "base/global.h"
+#include "base/preferences.h"
 #include "base/unicodestrings.h"
 #include "base/utils/misc.h"
 
@@ -48,51 +49,59 @@ namespace
     struct SplitValue
     {
         qreal arg = 0;
-        Utils::Misc::SizeUnit unit {};
-        qlonglong sizeInBytes() const
+        Utils::Misc::Unit unit {Utils::Misc::UnitType::Byte, Utils::Misc::UnitPrefix::None};
+
+        qreal sizeInBytes() const
         {
-            return Utils::Misc::sizeInBytes(arg, unit);
+            return (arg * static_cast<qint64>(unit.prefix))
+                    / ((unit.type == Utils::Misc::UnitType::Bit) ? 8 : 1);
         }
     };
 
-    SplitValue getRoundedYScale(qreal value)
+    SplitValue getRoundedYScale(
+            const qreal bytes, const Utils::Misc::UnitType type, const bool useDecimalPrefixes)
     {
-        using Utils::Misc::SizeUnit;
+        qreal value = Utils::Misc::bytesToUnitValue(
+                static_cast<qint64>(bytes), {type, Utils::Misc::UnitPrefix::None});
+        if (value == 0.0)
+            return {0, {type, Utils::Misc::UnitPrefix::None}};
+        if (value <= 12.0)
+            return {12, {type, Utils::Misc::UnitPrefix::None}};
 
-        if (value == 0.0) return {0, SizeUnit::Byte};
-        if (value <= 12.0) return {12, SizeUnit::Byte};
-
-        SizeUnit calculatedUnit = SizeUnit::Byte;
-        while (value > 1024)
+        const int divisor = useDecimalPrefixes ? 1000 : 1024;
+        int exponent = 0;
+        while ((value >= divisor) && (exponent < 6))
         {
-            value /= 1024;
-            calculatedUnit = static_cast<SizeUnit>(static_cast<int>(calculatedUnit) + 1);
+            value /= divisor;
+            ++exponent;
         }
 
+        const Utils::Misc::Unit unit {
+            type, Utils::Misc::unitPrefixForExponent(exponent, useDecimalPrefixes)};
         if (value > 100)
         {
             const qreal roundedValue {std::ceil(value / 40) * 40};
-            return {roundedValue, calculatedUnit};
+            return {roundedValue, unit};
         }
 
         if (value > 10)
         {
             const qreal roundedValue {std::ceil(value / 4) * 4};
-            return {roundedValue, calculatedUnit};
+            return {roundedValue, unit};
         }
 
         for (const auto &roundedValue : roundingTable)
         {
             if (value <= roundedValue)
-                return {roundedValue, calculatedUnit};
+                return {roundedValue, unit};
         }
-        return {10.0, calculatedUnit};
+        return {10.0, unit};
     }
 
-    QString formatLabel(const qreal argValue, const Utils::Misc::SizeUnit unit)
+    QString formatLabel(const qreal argValue, const Utils::Misc::Unit unit)
     {
         // check is there need for digits after decimal separator
-        const int precision = (argValue < 10) ? friendlyUnitPrecision(unit) : 0;
+        const int precision = (argValue < 10) ? friendlyUnitPrecision(unit.prefix) : 0;
         return QLocale::system().toString(argValue, 'f', precision)
                + QChar::Nbsp + unitString(unit, true);
     }
@@ -287,8 +296,13 @@ void SpeedPlotView::paintEvent(QPaintEvent *)
     QRect rect = viewport()->rect();
     QFontMetrics fontMetrics = painter.fontMetrics();
 
+    const auto *pref = Preferences::instance();
+    const auto speedUnitType = pref->speedUnitType();
+    const bool useDecimalPrefixes = pref->speedUseDecimalPrefixes();
+
     rect.adjust(4, 4, 0, -4); // Add padding
-    const SplitValue niceScale = getRoundedYScale(maxYValue());
+    const SplitValue niceScale = getRoundedYScale(
+            static_cast<qreal>(maxYValue()), speedUnitType, useDecimalPrefixes);
     rect.adjust(0, fontMetrics.height(), 0, 0); // Add top padding for top speed text
 
     // draw Y axis speed labels

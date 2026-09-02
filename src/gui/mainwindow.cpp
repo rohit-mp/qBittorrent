@@ -141,8 +141,8 @@ namespace
 MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, const QString &titleSuffix)
     : GUIApplicationComponent(app)
     , m_ui {new Ui::MainWindow}
-    , m_downloadRate {Utils::Misc::friendlyUnit(0, true)}
-    , m_uploadRate {Utils::Misc::friendlyUnit(0, true)}
+    , m_downloadRate {Utils::Misc::friendlySpeedUnit(0, Utils::Misc::UnitType::Byte, false)}
+    , m_uploadRate {Utils::Misc::friendlySpeedUnit(0, Utils::Misc::UnitType::Byte, false)}
     , m_pwr {new PowerManagement}
     , m_preventTimer {new QTimer(this)}
     , m_storeExecutionLogEnabled {EXECUTIONLOG_SETTINGS_KEY(u"Enabled"_s)}
@@ -1499,8 +1499,11 @@ void MainWindow::loadSessionStats()
 {
     const auto *btSession = BitTorrent::Session::instance();
     const BitTorrent::SessionStatus &status = btSession->status();
-    m_downloadRate = Utils::Misc::friendlyUnit(status.payloadDownloadRate, true);
-    m_uploadRate = Utils::Misc::friendlyUnit(status.payloadUploadRate, true);
+    const auto *pref = Preferences::instance();
+    m_downloadRate = Utils::Misc::friendlySpeedUnit(
+            status.payloadDownloadRate, pref->speedUnitType(), pref->speedUseDecimalPrefixes());
+    m_uploadRate = Utils::Misc::friendlySpeedUnit(
+            status.payloadUploadRate, pref->speedUnitType(), pref->speedUseDecimalPrefixes());
 
     // update global information
 #ifdef Q_OS_MACOS

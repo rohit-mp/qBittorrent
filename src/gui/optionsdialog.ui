@@ -2442,6 +2442,63 @@ readme[0-9].txt: filter 'readme1.txt', 'readme2.txt' but not 'readme10.txt'.</st
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <item>
+             <widget class="QGroupBox" name="speedUnitsBox">
+              <property name="title">
+               <string>Speed Units</string>
+              </property>
+              <layout class="QGridLayout" name="speedUnitsBoxLayout">
+               <item row="0" column="0">
+                <widget class="QLabel" name="speedUnitTypeLabel">
+                 <property name="text">
+                  <string>Unit:</string>
+                 </property>
+                 <property name="buddy">
+                  <cstring>speedUnitTypeCombo</cstring>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QComboBox" name="speedUnitTypeCombo">
+                 <item>
+                  <property name="text">
+                   <string>Bytes per second</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Bits per second</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="speedPrefixLabel">
+                 <property name="text">
+                  <string>Prefix:</string>
+                 </property>
+                 <property name="buddy">
+                  <cstring>speedPrefixCombo</cstring>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QComboBox" name="speedPrefixCombo">
+                 <item>
+                  <property name="text">
+                   <string>Binary (powers of 1024)</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Decimal (powers of 1000)</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="rateLimitBox">
               <property name="title">
                <string>Global Rate Limits</string>

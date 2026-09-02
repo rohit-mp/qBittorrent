@@ -28,6 +28,10 @@
 
 #include "misc.h"
 
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <limits>
 #include <optional>
 
 #include <boost/version.hpp>
@@ -54,7 +58,35 @@
 
 namespace
 {
-    const struct { const char *source; const char *comment; } units[] =
+    struct UnitEntry
+    {
+        const char *source;
+        const char *comment;
+    };
+
+    constexpr std::array decimalPrefixes
+    {
+        Utils::Misc::UnitPrefix::None,
+        Utils::Misc::UnitPrefix::Kilo,
+        Utils::Misc::UnitPrefix::Mega,
+        Utils::Misc::UnitPrefix::Giga,
+        Utils::Misc::UnitPrefix::Tera,
+        Utils::Misc::UnitPrefix::Peta,
+        Utils::Misc::UnitPrefix::Exa
+    };
+
+    constexpr std::array binaryPrefixes
+    {
+        Utils::Misc::UnitPrefix::None,
+        Utils::Misc::UnitPrefix::Kibi,
+        Utils::Misc::UnitPrefix::Mebi,
+        Utils::Misc::UnitPrefix::Gibi,
+        Utils::Misc::UnitPrefix::Tebi,
+        Utils::Misc::UnitPrefix::Pebi,
+        Utils::Misc::UnitPrefix::Exbi
+    };
+
+    const UnitEntry iecByteUnits[] =
     {
         QT_TRANSLATE_NOOP3("misc", "B", "bytes"),
         QT_TRANSLATE_NOOP3("misc", "KiB", "kibibytes (1024 bytes)"),
@@ -65,6 +97,127 @@ namespace
         QT_TRANSLATE_NOOP3("misc", "EiB", "exbibytes (1024 pebibytes)")
     };
 
+    const UnitEntry siByteUnits[] =
+    {
+        QT_TRANSLATE_NOOP3("misc", "B", "bytes"),
+        QT_TRANSLATE_NOOP3("misc", "kB", "kilobytes (1000 bytes)"),
+        QT_TRANSLATE_NOOP3("misc", "MB", "megabytes (1000 kilobytes)"),
+        QT_TRANSLATE_NOOP3("misc", "GB", "gigabytes (1000 megabytes)"),
+        QT_TRANSLATE_NOOP3("misc", "TB", "terabytes (1000 gigabytes)"),
+        QT_TRANSLATE_NOOP3("misc", "PB", "petabytes (1000 terabytes)"),
+        QT_TRANSLATE_NOOP3("misc", "EB", "exabytes (1000 petabytes)")
+    };
+
+    const UnitEntry iecBitUnits[] =
+    {
+        QT_TRANSLATE_NOOP3("misc", "bit", "bits"),
+        QT_TRANSLATE_NOOP3("misc", "Kibit", "kibibits (1024 bits)"),
+        QT_TRANSLATE_NOOP3("misc", "Mibit", "mebibits (1024 kibibits)"),
+        QT_TRANSLATE_NOOP3("misc", "Gibit", "gibibits (1024 mebibits)"),
+        QT_TRANSLATE_NOOP3("misc", "Tibit", "tebibits (1024 gibibits)"),
+        QT_TRANSLATE_NOOP3("misc", "Pibit", "pebibits (1024 tebibits)"),
+        QT_TRANSLATE_NOOP3("misc", "Eibit", "exbibits (1024 pebibits)")
+    };
+
+    const UnitEntry siBitUnits[] =
+    {
+        QT_TRANSLATE_NOOP3("misc", "bit", "bits"),
+        QT_TRANSLATE_NOOP3("misc", "kbit", "kilobits (1000 bits)"),
+        QT_TRANSLATE_NOOP3("misc", "Mbit", "megabits (1000 kilobits)"),
+        QT_TRANSLATE_NOOP3("misc", "Gbit", "gigabits (1000 megabits)"),
+        QT_TRANSLATE_NOOP3("misc", "Tbit", "terabits (1000 gigabits)"),
+        QT_TRANSLATE_NOOP3("misc", "Pbit", "petabits (1000 terabits)"),
+        QT_TRANSLATE_NOOP3("misc", "Ebit", "exabits (1000 petabits)")
+    };
+
+    const UnitEntry iecBitCompactUnits[] =
+    {
+        QT_TRANSLATE_NOOP3("misc", "b", "bits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Kib", "kibibits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Mib", "mebibits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Gib", "gibibits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Tib", "tebibits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Pib", "pebibits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Eib", "exbibits (compact)")
+    };
+
+    const UnitEntry siBitCompactUnits[] =
+    {
+        QT_TRANSLATE_NOOP3("misc", "b", "bits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "kb", "kilobits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Mb", "megabits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Gb", "gigabits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Tb", "terabits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Pb", "petabits (compact)"),
+        QT_TRANSLATE_NOOP3("misc", "Eb", "exabits (compact)")
+    };
+
+    bool isDecimalPrefix(const Utils::Misc::UnitPrefix prefix)
+    {
+        switch (prefix)
+        {
+        case Utils::Misc::UnitPrefix::Kilo:
+        case Utils::Misc::UnitPrefix::Mega:
+        case Utils::Misc::UnitPrefix::Giga:
+        case Utils::Misc::UnitPrefix::Tera:
+        case Utils::Misc::UnitPrefix::Peta:
+        case Utils::Misc::UnitPrefix::Exa:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    int prefixIndex(const Utils::Misc::UnitPrefix prefix)
+    {
+        switch (prefix)
+        {
+        case Utils::Misc::UnitPrefix::None:
+            return 0;
+        case Utils::Misc::UnitPrefix::Kilo:
+        case Utils::Misc::UnitPrefix::Kibi:
+            return 1;
+        case Utils::Misc::UnitPrefix::Mega:
+        case Utils::Misc::UnitPrefix::Mebi:
+            return 2;
+        case Utils::Misc::UnitPrefix::Giga:
+        case Utils::Misc::UnitPrefix::Gibi:
+            return 3;
+        case Utils::Misc::UnitPrefix::Tera:
+        case Utils::Misc::UnitPrefix::Tebi:
+            return 4;
+        case Utils::Misc::UnitPrefix::Peta:
+        case Utils::Misc::UnitPrefix::Pebi:
+            return 5;
+        case Utils::Misc::UnitPrefix::Exa:
+        case Utils::Misc::UnitPrefix::Exbi:
+            return 6;
+        }
+        return -1;
+    }
+
+    const UnitEntry *unitTable(const Utils::Misc::Unit unit)
+    {
+        if (unit.type == Utils::Misc::UnitType::Bit)
+            return isDecimalPrefix(unit.prefix) ? siBitUnits : iecBitUnits;
+        return isDecimalPrefix(unit.prefix) ? siByteUnits : iecByteUnits;
+    }
+
+    QString compactUnitString(const Utils::Misc::Unit unit)
+    {
+        const int index = prefixIndex(unit.prefix);
+        Q_ASSERT(index >= 0);
+        if (unit.type == Utils::Misc::UnitType::Bit)
+        {
+            const auto &entry = (isDecimalPrefix(unit.prefix)
+                    ? siBitCompactUnits : iecBitCompactUnits)[index];
+            return QCoreApplication::translate("misc", entry.source, entry.comment);
+        }
+
+        const auto &entry = unitTable(unit)[index];
+        return QCoreApplication::translate("misc", entry.source, entry.comment).left(1);
+    }
+
     // return best userfriendly storage unit (B, KiB, MiB, GiB, TiB, ...)
     // use Binary prefix standards from IEC 60027-2
     // see http://en.wikipedia.org/wiki/Kilobyte
@@ -73,30 +226,42 @@ namespace
     struct SplitToFriendlyUnitResult
     {
         qreal value;
-        Utils::Misc::SizeUnit unit;
+        int prefixIndex;
     };
 
-    std::optional<SplitToFriendlyUnitResult> splitToFriendlyUnit(const qint64 bytes, const int unitThreshold = 1024)
+    std::optional<SplitToFriendlyUnitResult> splitToFriendlyUnit(
+            const qint64 bytes, const Utils::Misc::UnitType type, const bool useDecimalPrefixes, const int unitThreshold = -1)
     {
         if (bytes < 0)
             return std::nullopt;
 
         int i = 0;
-        auto value = static_cast<qreal>(bytes);
+        qreal value = static_cast<qreal>(bytes);
+        if (type == Utils::Misc::UnitType::Bit)
+            value *= 8;
 
-        while ((value >= unitThreshold) && (i < static_cast<int>(Utils::Misc::SizeUnit::ExbiByte)))
+        const qreal divisor = useDecimalPrefixes ? 1000 : 1024;
+        const qreal threshold = (unitThreshold >= 0) ? unitThreshold : divisor;
+        while ((value >= threshold) && (i < static_cast<int>(binaryPrefixes.size() - 1)))
         {
-            value /= 1024;
+            value /= divisor;
             ++i;
         }
-        return {{value, static_cast<Utils::Misc::SizeUnit>(i)}};
+        return {{value, i}};
     }
 }
 
 QString Utils::Misc::unitString(const SizeUnit unit, const bool isSpeed)
 {
-    const auto &unitString = units[static_cast<int>(unit)];
-    QString ret = QCoreApplication::translate("misc", unitString.source, unitString.comment);
+    return unitString({UnitType::Byte, binaryPrefixes[static_cast<int>(unit)]}, isSpeed);
+}
+
+QString Utils::Misc::unitString(const Unit unit, const bool isSpeed)
+{
+    const int index = prefixIndex(unit.prefix);
+    Q_ASSERT(index >= 0);
+    const auto &entry = unitTable(unit)[index];
+    QString ret = QCoreApplication::translate("misc", entry.source, entry.comment);
     if (isSpeed)
         ret += QCoreApplication::translate("misc", "/s", "per second");
     return ret;
@@ -104,19 +269,55 @@ QString Utils::Misc::unitString(const SizeUnit unit, const bool isSpeed)
 
 QString Utils::Misc::friendlyUnit(const qint64 bytes, const bool isSpeed, const int precision)
 {
-    const std::optional<SplitToFriendlyUnitResult> result = splitToFriendlyUnit(bytes);
+    const std::optional<SplitToFriendlyUnitResult> result = splitToFriendlyUnit(bytes, UnitType::Byte, false);
     if (!result)
         return QCoreApplication::translate("misc", "Unknown", "Unknown (size)");
 
-    const int digitPrecision = (precision >= 0) ? precision : friendlyUnitPrecision(result->unit);
+    const Unit unit {UnitType::Byte, binaryPrefixes[result->prefixIndex]};
+    const int digitPrecision = (precision >= 0) ? precision : friendlyUnitPrecision(unit.prefix);
     return Utils::String::fromDouble(result->value, digitPrecision)
-           + QChar::Nbsp + unitString(result->unit, isSpeed);
+           + QChar::Nbsp + unitString(unit, isSpeed);
+}
+
+QString Utils::Misc::friendlySpeedUnit(
+        const qint64 bytes, const UnitType type, const bool useDecimalPrefixes, const int precision)
+{
+    const std::optional<SplitToFriendlyUnitResult> result = splitToFriendlyUnit(bytes, type, useDecimalPrefixes);
+    if (!result)
+        return QCoreApplication::translate("misc", "Unknown", "Unknown (size)");
+
+    const auto &prefixes = useDecimalPrefixes ? decimalPrefixes : binaryPrefixes;
+    const Unit unit {type, prefixes[result->prefixIndex]};
+    const int digitPrecision = (precision >= 0) ? precision : friendlyUnitPrecision(unit.prefix);
+    return Utils::String::fromDouble(result->value, digitPrecision)
+           + QChar::Nbsp + unitString(unit, true);
+}
+
+QString Utils::Misc::friendlySpeedUnitCompact(
+        const qint64 bytes, const UnitType type, const bool useDecimalPrefixes)
+{
+    const std::optional<SplitToFriendlyUnitResult> result = splitToFriendlyUnit(
+            bytes, type, useDecimalPrefixes, 1000);
+    if (!result)
+        return QCoreApplication::translate("misc", "Unknown", "Unknown (size)");
+
+    int precision = 0;
+    if (result->value < 10)
+        precision = 2;
+    else if (result->value < 100)
+        precision = 1;
+
+    const auto &prefixes = useDecimalPrefixes ? decimalPrefixes : binaryPrefixes;
+    const Unit unit {type, prefixes[result->prefixIndex]};
+
+    return Utils::String::fromDouble(result->value, precision)
+           + QChar::Nbsp + compactUnitString(unit);
 }
 
 QString Utils::Misc::friendlyUnitCompact(const qint64 bytes)
 {
     // avoid 1000-1023 values, use next larger unit instead
-    const std::optional<SplitToFriendlyUnitResult> result = splitToFriendlyUnit(bytes, 1000);
+    const std::optional<SplitToFriendlyUnitResult> result = splitToFriendlyUnit(bytes, UnitType::Byte, false, 1000);
     if (!result)
         return QCoreApplication::translate("misc", "Unknown", "Unknown (size)");
 
@@ -128,20 +329,25 @@ QString Utils::Misc::friendlyUnitCompact(const qint64 bytes)
 
     return Utils::String::fromDouble(result->value, precision)
            // use only one character for unit representation
-           + QChar::Nbsp + unitString(result->unit, false)[0];
+           + QChar::Nbsp + unitString({UnitType::Byte, binaryPrefixes[result->prefixIndex]}, false)[0];
 }
 
 int Utils::Misc::friendlyUnitPrecision(const SizeUnit unit)
 {
+    return friendlyUnitPrecision(binaryPrefixes[static_cast<int>(unit)]);
+}
+
+int Utils::Misc::friendlyUnitPrecision(const UnitPrefix prefix)
+{
     // friendlyUnit's number of digits after the decimal point
-    switch (unit)
+    switch (prefixIndex(prefix))
     {
-    case SizeUnit::Byte:
+    case 0:
         return 0;
-    case SizeUnit::KibiByte:
-    case SizeUnit::MebiByte:
+    case 1:
+    case 2:
         return 1;
-    case SizeUnit::GibiByte:
+    case 3:
         return 2;
     default:
         return 3;
@@ -153,6 +359,67 @@ qlonglong Utils::Misc::sizeInBytes(qreal size, const Utils::Misc::SizeUnit unit)
     for (int i = 0; i < static_cast<int>(unit); ++i)
         size *= 1024;
     return size;
+}
+
+Utils::Misc::UnitPrefix Utils::Misc::unitPrefixForExponent(
+        const int exponent, const bool useDecimalPrefixes)
+{
+    Q_ASSERT((exponent >= 0) && (exponent < static_cast<int>(binaryPrefixes.size())));
+    return useDecimalPrefixes ? decimalPrefixes[exponent] : binaryPrefixes[exponent];
+}
+
+Utils::Misc::Unit Utils::Misc::speedInputUnit(const UnitType type, const bool useDecimalPrefixes)
+{
+    return {type, useDecimalPrefixes ? UnitPrefix::Kilo : UnitPrefix::Kibi};
+}
+
+qreal Utils::Misc::bytesToUnitValue(const qint64 bytes, const Unit unit)
+{
+    const qreal value = static_cast<qreal>(bytes) * ((unit.type == UnitType::Bit) ? 8 : 1);
+    return value / static_cast<qint64>(unit.prefix);
+}
+
+std::optional<qint64> Utils::Misc::unitValueToBytes(const qreal value, const Unit unit)
+{
+    if (!std::isfinite(value) || (value < 0))
+        return std::nullopt;
+
+    const qreal bytes = (value * static_cast<qint64>(unit.prefix))
+            / ((unit.type == UnitType::Bit) ? 8 : 1);
+    // Negative values are rejected above, and qreal cannot represent qint64::max() exactly.
+    if (bytes >= static_cast<qreal>(std::numeric_limits<qint64>::max()))
+        return std::nullopt;
+
+    return static_cast<qint64>(std::round(bytes));
+}
+
+qint64 Utils::Misc::normalizeKibiByteRate(const qint64 bytes)
+{
+    if (bytes <= 0)
+        return 0;
+
+    constexpr qint64 maxRate = (std::numeric_limits<int>::max() / 1024) * 1024LL;
+    const qint64 boundedBytes = std::min(bytes, maxRate);
+    return std::max<qint64>(1024, ((boundedBytes + 512) / 1024) * 1024);
+}
+
+qint64 Utils::Misc::normalizeKibiByteRate(const qint64 bytes, const qint64 currentBytes)
+{
+    qint64 normalizedBytes = normalizeKibiByteRate(bytes);
+    if ((bytes > currentBytes) && (normalizedBytes <= currentBytes))
+    {
+        const qint64 maxRate = normalizeKibiByteRate(std::numeric_limits<qint64>::max());
+        normalizedBytes = (currentBytes >= maxRate)
+                ? maxRate
+                : normalizeKibiByteRate(currentBytes + 1024);
+    }
+    else if ((bytes < currentBytes) && (normalizedBytes >= currentBytes))
+    {
+        normalizedBytes = (currentBytes <= 1024)
+                ? 0
+                : normalizeKibiByteRate(currentBytes - 1024);
+    }
+    return normalizedBytes;
 }
 
 bool Utils::Misc::isPreviewable(const Path &filePath)

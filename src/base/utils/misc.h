@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include <QtTypes>
 
 #include "base/pathfwd.h"
@@ -38,6 +40,37 @@ class QStringView;
 /*  Miscellaneous functions that can be useful */
 namespace Utils::Misc
 {
+    enum class UnitType
+    {
+        Bit,
+        Byte
+    };
+
+    enum class UnitPrefix : qint64
+    {
+        None = 1,
+        Kilo = 1000LL,
+        Kibi = 1024LL,
+        Mega = 1000LL * 1000,
+        Mebi = 1024LL * 1024,
+        Giga = 1000LL * 1000 * 1000,
+        Gibi = 1024LL * 1024 * 1024,
+        Tera = 1000LL * 1000 * 1000 * 1000,
+        Tebi = 1024LL * 1024 * 1024 * 1024,
+        Peta = 1000LL * 1000 * 1000 * 1000 * 1000,
+        Pebi = 1024LL * 1024 * 1024 * 1024 * 1024,
+        Exa = 1000LL * 1000 * 1000 * 1000 * 1000 * 1000,
+        Exbi = 1024LL * 1024 * 1024 * 1024 * 1024 * 1024
+    };
+
+    struct Unit
+    {
+        UnitType type;
+        UnitPrefix prefix;
+
+        friend bool operator==(const Unit &, const Unit &) = default;
+    };
+
     // use binary prefix standards from IEC 60027-2
     // see http://en.wikipedia.org/wiki/Kilobyte
     enum class SizeUnit
@@ -69,13 +102,23 @@ namespace Utils::Misc
     QString zlibVersionString();
 
     QString unitString(SizeUnit unit, bool isSpeed = false);
+    QString unitString(Unit unit, bool isSpeed = false);
 
     // return the best user friendly storage unit (B, KiB, MiB, GiB, TiB)
     // value must be given in bytes
     QString friendlyUnit(qint64 bytes, bool isSpeed = false, int precision = -1);
+    QString friendlySpeedUnit(qint64 bytes, UnitType type, bool useDecimalPrefixes, int precision = -1);
+    QString friendlySpeedUnitCompact(qint64 bytes, UnitType type, bool useDecimalPrefixes);
     QString friendlyUnitCompact(qint64 bytes);
     int friendlyUnitPrecision(SizeUnit unit);
+    int friendlyUnitPrecision(UnitPrefix prefix);
     qint64 sizeInBytes(qreal size, SizeUnit unit);
+    UnitPrefix unitPrefixForExponent(int exponent, bool useDecimalPrefixes);
+    Unit speedInputUnit(UnitType type, bool useDecimalPrefixes);
+    qreal bytesToUnitValue(qint64 bytes, Unit unit);
+    std::optional<qint64> unitValueToBytes(qreal value, Unit unit);
+    qint64 normalizeKibiByteRate(qint64 bytes);
+    qint64 normalizeKibiByteRate(qint64 bytes, qint64 currentBytes);
 
     bool isPreviewable(const Path &filePath);
     bool isTorrentLink(const QString &str);
